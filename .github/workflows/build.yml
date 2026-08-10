@@ -27,7 +27,7 @@ jobs:
         repository: 5fish/SVT-AV1
         ref: v2.3.260719
         path: SVT-AV1
-    - run: Akatmks/build-svt-av1@v1
+    - uses: Akatmks/build-svt-av1@v1
       with:
         path: 'SVT-AV1'
         static: 'true'
