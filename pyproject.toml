@@ -1,0 +1,32 @@
+[build-system]
+build-backend = "mesonpy"
+requires = ["meson-python"]
+
+[project]
+name = "vapoursynth-cdef"
+description = "VapourSynth port of Constrained Directional Enhancement Filter"
+readme = "README.md"
+license-files = ["LICENSE", "PATENTS"]
+requires-python = ">=3.8"
+dependencies = [
+    "vapoursynth",
+]
+keywords = ["VapourSynth"]
+authors = [
+    { name = "Akatsumekusa", email = "Akatsumekusa@protonmail.com" },
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: C++",
+    "Topic :: Multimedia :: Video"
+]
+dynamic = ["version"]
+
+[project.urls]
+Documentation = "https://github.com/Akatmks/vapoursynth-cdef"
+Issues = "https://github.com/Akatmks/vapoursynth-cdef/issues"
+Source = "https://github.com/Akatmks/vapoursynth-cdef"
