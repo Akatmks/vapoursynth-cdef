@@ -39,149 +39,24 @@
 #include <VapourSynth4.h>
 #include <VSHelper4.h>
 
-struct FindData {
+#define MAX_SB_SIZE_LOG2 7
+#define CDEF_NBLOCKS ((1 << MAX_SB_SIZE_LOG2) / 8)
+void svt_cdef_filter_fb(uint8_t *dst8, uint16_t *dst16, int32_t dstride, uint16_t *in, int32_t xdec, int32_t ydec,
+                        uint8_t dir[CDEF_NBLOCKS][CDEF_NBLOCKS], int32_t *dirinit,
+                        int32_t var[CDEF_NBLOCKS][CDEF_NBLOCKS], int32_t pli, CdefList *dlist, int32_t cdef_count,
+                        int32_t level, int32_t sec_strength, int32_t pri_damping, int32_t sec_damping,
+                        int32_t coeff_shift, uint8_t subsampling_factor);
+
+struct CDEFData {
     VSNode *clip;
-    VSNode *ref;
-    double  ref_thr;
+    int64_t pri_strength;
+    int64_t sec_strength;
+    int64_t pri_damping;
+    int64_t sec_damping;
 };
 
-template <typename T>
-static inline constexpr T get_max_value() {
-    if constexpr (std::is_integral_v<T>)
-        return std::numeric_limits<T>::max();
-    else
-        return 1.0;
-}
-// template <typename T>
-// static inline constexpr T get_min_value() {
-//     if constexpr (std::is_integral_v<T>)
-//         return std::numeric_limits<T>::min();
-//     else
-//         return 0.0;
-// }
-
-template <typename T>
-static inline double calc_mean(const T * VS_RESTRICT srcp, int width) {
-    constexpr T max_value = get_max_value<T>();
-    // constexpr T min_value = get_min_value<T>();
-
-    std::conditional_t<std::is_same_v<T, uint8_t>,
-                       uint32_t,
-                       std::conditional_t<std::is_same_v<T, uint16_t>,
-                                          uint64_t,
-                                          double>>
-        sum = 0;
-    // if constexpr (std::is_integral_v<T>) {
-        #pragma clang loop vectorize(assume_safety) interleave(enable)
-        for (int x = 0; x < width; x++) {
-            #pragma clang fp reassociate(on)
-            sum += srcp[x];
-        }
-    // }
-    // else {
-        // #pragma clang loop vectorize(assume_safety) interleave(enable)
-        // for (int x = 0; x < width; x++) {
-        //     #pragma clang fp reassociate(on)
-        //     sum += std::clamp(srcp[x], min_value, max_value);
-        // }
-    // }
-
-    return static_cast<double>(sum) / width / max_value;
-}
-
-// template <typename T>
-// static inline double calc_15_power_mean(const T * VS_RESTRICT srcp, int width) {
-//     constexpr T max_value = get_max_value<T>();
-//     constexpr T min_value = get_min_value<T>();
-
-//     double sum = 0.0;
-//     if constexpr (std::is_integral_v<T>) {
-//         #pragma clang loop vectorize(assume_safety) interleave(enable)
-//         for (int x = 0; x < width; x++) {
-//             #pragma clang fp reassociate(on)
-//             const auto x_ = static_cast<double>(srcp[x]);
-//             sum += x_ * std::sqrt(x_);
-//         }
-//     }
-//     else {
-//         #pragma clang loop vectorize(assume_safety) interleave(enable)
-//         for (int x = 0; x < width; x++) {
-//             #pragma clang fp reassociate(on)
-//             const auto x_ = static_cast<double>(std::clamp(srcp[x], min_value, max_value));
-//             sum += x_ * std::sqrt(x_);
-//         }
-//     }
-
-//     return std::pow(sum / width, 2.0 / 3) / max_value;
-// }
-
-// template <typename T>
-// static inline double calc_root_mean_square(const T * VS_RESTRICT srcp, int width) {
-//     constexpr T max_value = get_max_value<T>();
-//     constexpr T min_value = get_min_value<T>();
-
-//     double sum = 0.0;
-//     if constexpr (std::is_integral_v<T>) {
-//         #pragma clang loop vectorize(assume_safety) interleave(enable)
-//         for (int x = 0; x < width; x++) {
-//             #pragma clang fp reassociate(on)
-//             const auto x_ = static_cast<double>(srcp[x]);
-//             sum += x_ * x_;
-//         }
-//     }
-//     else {
-//         #pragma clang loop vectorize(assume_safety) interleave(enable)
-//         for (int x = 0; x < width; x++) {
-//             #pragma clang fp reassociate(on)
-//             const auto x_ = static_cast<double>(std::clamp(srcp[x], min_value, max_value));
-//             sum += x_ * x_;
-//         }
-//     }
-
-//     return std::sqrt(sum / width) / max_value;
-// }
-
-// Incremental calculation of weighted mean and variance, Tony Finch, 2009
-template <double alpha = 0.05>
-class ExponentiallyWeightedStats {
-    static_assert(alpha > 0.0 && alpha < 1.0);
-    static constexpr double one_minus_alpha = 1 - alpha;
-
-    bool   init = false;
-    double _mean;
-    double _var;
-
-public:
-    void add_data(double data) {
-        if (!init) {
-            init  = true;
-            _mean = data;
-            _var  = 0.0;
-        }
-        else {
-            const double diff =  data - _mean;
-            const double incr =  alpha * diff;
-            _mean             += incr;
-            _var              =  one_minus_alpha * (_var + diff * incr);
-        }
-    }
-    std::optional<double> mean() {
-        if (!init)
-            return std::nullopt;
-        else
-            return _mean;
-    }
-    std::optional<double> stddev() {
-        if (!init)
-            return std::nullopt;
-        else
-            return std::sqrt(_var);
-    }
-};
-
-template <typename T>
-static const VSFrame * VS_CC letterbox_search_get_frame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
-    auto *d = static_cast<FindData *>(instanceData);
+static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
+    auto *d = static_cast<CDEFData *>(instanceData);
 
     if (activationReason == arInitial) {
         vsapi->requestFrameFilter(n, d->clip, frameCtx);
@@ -287,55 +162,40 @@ static const VSFrame * VS_CC letterbox_search_get_frame(int n, int activationRea
     return nullptr;
 }
 
-static void VS_CC letterbox_search_free(void *instanceData, VSCore *core, const VSAPI *vsapi) {
-    auto *d = static_cast<FindData *>(instanceData);
+static void VS_CC cdef_free(void *instanceData, VSCore *core, const VSAPI *vsapi) {
+    auto *d = static_cast<CDEFData *>(instanceData);
     vsapi->freeNode(d->clip);
-    vsapi->freeNode(d->ref);
     delete d;
 }
 
-static void VS_CC letterbox_search_create(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
-    std::unique_ptr<FindData> d(new FindData);
+static void VS_CC cdef_create(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+    std::unique_ptr<CDEFData> d(new CDEFData);
 
-    d->clip           = vsapi->mapGetNode(in, "clip", 0, nullptr);
-    const auto vi     = vsapi->getVideoInfo(d->clip);
-    d->ref            = vsapi->mapGetNode(in, "ref", 0, nullptr);
-    const auto ref_vi = vsapi->getVideoInfo(d->ref);
-    if (!vsh::isConstantVideoFormat(vi) || !vsh::isConstantVideoFormat(ref_vi) ||
-        vi->format.sampleType != ref_vi->format.sampleType ||
-        vi->format.bitsPerSample != ref_vi->format.bitsPerSample ||
-        vi->height != ref_vi->height ||
-        vi->width != ref_vi->width) {
-        vsapi->mapSetError(out, "vsletterbox: Both input must be of constant format, and of the same sample type, bits per sample, height, and width");
-        vsapi->freeNode(d->clip);
-        vsapi->freeNode(d->ref);
-        return;
-    }
+    d->clip       = vsapi->mapGetNode(in, "clip", 0, nullptr);
+    const auto vi = vsapi->getVideoInfo(d->clip);
 
-    d->ref_thr = vsapi->mapGetFloat(in, "ref_thr", 0, nullptr);
+    d->pri_strength = vsapi->mapGetInt(in, "pri_strength", 0, nullptr);
+    d->sec_strength = vsapi->mapGetInt(in, "sec_strength", 0, nullptr);
+    d->pri_damping  = vsapi->mapGetInt(in, "pri_damping", 0, nullptr);
+    d->sec_damping  = vsapi->mapGetInt(in, "sec_damping", 0, nullptr);
     
-    VSFilterDependency deps[] = {{d->clip, rpStrictSpatial}, {d->ref, rpStrictSpatial}};
-    int num_deps = 2;
+    VSFilterDependency deps[] = {{d->clip, rpStrictSpatial}};
+    int num_deps = 1;
 
-    if (vi->format.sampleType == stInteger && vi->format.bitsPerSample == 32)
-        vsapi->createVideoFilter(out, "Find", vi, letterbox_search_get_frame<uint32_t>, letterbox_search_free, fmParallel, deps, num_deps, d.release(), core);
-    else if (vi->format.sampleType == stInteger && vi->format.bitsPerSample == 16)
-        vsapi->createVideoFilter(out, "Find", vi, letterbox_search_get_frame<uint16_t>, letterbox_search_free, fmParallel, deps, num_deps, d.release(), core);
-    else if (vi->format.sampleType == stInteger && vi->format.bitsPerSample == 8)
-        vsapi->createVideoFilter(out, "Find", vi, letterbox_search_get_frame<uint8_t>, letterbox_search_free, fmParallel, deps, num_deps, d.release(), core);
-    else if (vi->format.sampleType == stFloat && vi->format.bitsPerSample == 32)
-        vsapi->createVideoFilter(out, "Find", vi, letterbox_search_get_frame<float>, letterbox_search_free, fmParallel, deps, num_deps, d.release(), core);
+    if (vi->format.sampleType == stInteger && (vi->format.bitsPerSample == 12 || vi->format.bitsPerSample == 10))
+        vsapi->createVideoFilter(out, "CDEF", vi, cdef_get_frame, cdef_free, fmParallel, deps, num_deps, d.release(), core);
     else {
-        vsapi->mapSetError(out, "vsletterbox: Only 32-bit, 16-bit, or 8-bit integer format or 32-bit float format are supported");
+        vsapi->mapSetError(out, "vsletterbox: Only 12-bit and 10-bit integer format are supported");
         vsapi->freeNode(d->clip);
-        vsapi->freeNode(d->ref);
         return;
     }
 }
 
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI *vspapi) {
-    vspapi->configPlugin("aka.letterbox", "letterbox", "Letterbox Detection and Cleaning", VS_MAKE_VERSION(1, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
-    vspapi->registerFunction("Find", "clip:vnode;"
-                                     "ref:vnode;"
-                                     "ref_thr:float;", "clip:vnode;", letterbox_search_create, NULL, plugin);
+    vspapi->configPlugin("aka.cdef", "cdef", "Constrained Directional Enhancement Filter", VS_MAKE_VERSION(1, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
+    vspapi->registerFunction("CDEF", "clip:vnode;"
+                                     "pri_strength:int;"
+                                     "sec_strength:int;"
+                                     "pri_damping:int"
+                                     "sec_damping:int", "clip:vnode;", cdef_create, NULL, plugin);
 }

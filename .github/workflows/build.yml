@@ -22,29 +22,30 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - uses: msys2/setup-msys2@v2
+    - uses: actions/checkout@v7
       with:
-        msystem: CLANG64
-        path-type: inherit
-      if: ${{ runner.os == 'Windows' }}
-    - uses: ZhongRuoyu/setup-llvm@v0
-      if: ${{ (runner.os == 'Windows' && runner.arch == 'X64') || runner.os == 'Linux' }}
-    - uses: ConorMacBride/install-package@v1
+        repository: 5fish/SVT-AV1
+        ref: v2.3.260719
+        path: SVT-AV1
+    - run: Akatmks/build-svt-av1@v1
       with:
-        brew: llvm lld
-      if: ${{ runner.os == 'macOS' }}
+        path: 'SVT-AV1'
+        static: 'true'
+        base-arch-only: 'true'
+        dovi-hdr10plus: 'false'
+
     - uses: actions/setup-python@v7
       with:
         python-version: '3.13'
     - run: python -m pip install build meson meson-python ninja vapoursynth wheel
 
-    - run: CC=clang CXX=clang++ CFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" CXXFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" LDFLAGS="-fuse-ld=lld" python -m build --no-isolation
+    - run: CC=clang CXX=clang++ CFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" CXXFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" LDFLAGS="-fuse-ld=lld $(cygpath -m -a SVT-AV1/BuildAction/x86-64-v3+znver2/static/SvtAv1Enc.lib)" python -m build --no-isolation
       if: ${{ runner.os == 'Windows' && runner.arch == 'X64' }}
-    - run: CC=clang CXX=clang++ CFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" CXXFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -Wl,-O3" python -m build --no-isolation
+    - run: CC=clang CXX=clang++ CFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" CXXFLAGS="-march=x86-64-v3 -mtune=znver2 -Werror" LDFLAGS="-fuse-ld=lld $(realpath SVT-AV1/BuildAction/x86-64-v3+znver2/static/libSvtAv1Enc.a) --rtlib=compiler-rt -Wl,-O3" python -m build --no-isolation
       if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
-    - run: PATH="/opt/homebrew/opt/llvm/bin:$PATH" CC=clang CXX=clang++ CFLAGS="-I/opt/homebrew/opt/llvm/include -march=armv8.5-a+simd+crypto -mtune=apple-m3 -Werror" CXXFLAGS="-I/opt/homebrew/opt/llvm/include -march=armv8.5-a+simd+crypto -mtune=apple-m3 -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -L/opt/homebrew/opt/llvm/lib" python -m build --no-isolation
+    - run: PATH="/opt/homebrew/opt/llvm/bin:$PATH" CC=clang CXX=clang++ CFLAGS="-I/opt/homebrew/opt/llvm/include -march=armv8.5-a+simd+crypto -mtune=apple-m3 -Werror" CXXFLAGS="-I/opt/homebrew/opt/llvm/include -march=armv8.5-a+simd+crypto -mtune=apple-m3 -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -L/opt/homebrew/opt/llvm/lib $(realpath SVT-AV1/BuildAction/armv8.5-a+simd+crypto+apple-m3/static/libSvtAv1Enc.a)" python -m build --no-isolation
       if: ${{ runner.os == 'macOS' && runner.arch == 'ARM64' }}
-    - run: PATH="/opt/homebrew/opt/llvm/bin:$PATH" CC=clang CXX=clang++ CFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" CXXFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -L/opt/homebrew/opt/llvm/lib" python -m build --no-isolation
+    - run: PATH="/opt/homebrew/opt/llvm/bin:$PATH" CC=clang CXX=clang++ CFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" CXXFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -L/opt/homebrew/opt/llvm/lib $(realpath SVT-AV1/BuildAction/skylake/static/libSvtAv1Enc.a)" python -m build --no-isolation
       if: ${{ runner.os == 'macOS' && runner.arch == 'X64' }}
     - run: python -m wheel tags --remove --python-tag py3 --abi-tag none dist/*.whl
 
