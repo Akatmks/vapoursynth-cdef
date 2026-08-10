@@ -5,8 +5,8 @@ project('vsletterbox', ['c', 'cpp'],
 add_project_arguments('-ffinite-math-only', language : ['c', 'cpp'])
 
 sources = [
-  'vscdefc/vscdef.cpp'
-  'vscdefc/cdef.c'
+  'vscdefc/vscdef.cpp',
+  'vscdefc/cdef_block.c'
 ]
 
 py = import('python').find_installation(pure: false)
