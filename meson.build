@@ -5,8 +5,7 @@ project('vsletterbox', ['c', 'cpp'],
 add_project_arguments('-ffinite-math-only', language : ['c', 'cpp'])
 
 sources = [
-  'vscdefc/vscdef.cpp',
-  'vscdefc/cdef_block.c'
+  'vscdefc/vscdef.cpp'
 ]
 
 py = import('python').find_installation(pure: false)
@@ -25,5 +24,6 @@ shared_library('vsletterbox', sources,
 
 py.install_sources(
   'vscdef/__init__.py',
+  'vscdef/vscdef.py',
   subdir: 'vscdef'
 )
