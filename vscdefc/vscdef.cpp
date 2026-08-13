@@ -41,10 +41,10 @@
 
 struct CDEFData {
     VSNode *clip;
-    int64_t pri_strength;
-    int64_t sec_strength;
-    int64_t pri_damping;
-    int64_t sec_damping;
+    int64_t pri_strength[VS_MAX_PLANES];
+    int64_t sec_strength[VS_MAX_PLANES];
+    int64_t pri_damping[VS_MAX_PLANES];
+    int64_t sec_damping[VS_MAX_PLANES];
     bool    planes[VS_MAX_PLANES];
 };
 
@@ -89,10 +89,10 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
         int32_t           var[CDEF_NBLOCKS][CDEF_NBLOCKS];
         CdefList          dlist[MI_SIZE_64X64 * MI_SIZE_64X64];
         int32_t           cdef_count;
-        const int32_t     pri_strength       = d->pri_strength;
-        const int32_t     sec_strength       = d->sec_strength;
-        const int32_t     pri_damping        = d->pri_damping;
-        const int32_t     sec_damping        = d->sec_damping;
+        auto              pri_strength       = d->pri_strength;
+        auto              sec_strength       = d->sec_strength;
+        auto              pri_damping        = d->pri_damping;
+        auto              sec_damping        = d->sec_damping;
         const int32_t     coeff_shift        = fi->bitsPerSample - 8;
         const uint8_t     subsampling_factor = 1;
 
@@ -177,11 +177,13 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
                             bufp += buf_stride;
                         }
     
-                        for (auto y_idx = fbiy[1] >> 3; y_idx < fbiy[2] >> 3; y_idx++) {
-                            for (auto x_idx = fbix[1] >> 3; x_idx < fbix[2] >> 3; x_idx++) {
-                                dlist[cdef_count].by = y_idx;
-                                dlist[cdef_count].bx = x_idx;
-                                cdef_count++;
+                        if (!pli) {
+                            for (auto y_idx = fbiy[1] >> 3; y_idx < fbiy[2] >> 3; y_idx++) {
+                                for (auto x_idx = fbix[1] >> 3; x_idx < fbix[2] >> 3; x_idx++) {
+                                    dlist[cdef_count].by = y_idx;
+                                    dlist[cdef_count].bx = x_idx;
+                                    cdef_count++;
+                                }
                             }
                         }
     
@@ -189,7 +191,7 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
                                            fb_bufp, xdec[pli], ydec[pli],
                                            dir, &dirinit,
                                            var, pli, dlist, cdef_count,
-                                           pri_strength, sec_strength, pri_damping, sec_damping,
+                                           pri_strength[pli], sec_strength[pli], pri_damping[pli], sec_damping[pli],
                                            coeff_shift, subsampling_factor);
                     }
                 }
@@ -242,10 +244,28 @@ static void VS_CC cdef_create(const VSMap *in, VSMap *out, void *userData, VSCor
         return;
     }
 
-    d->pri_strength = vsapi->mapGetInt(in, "pri_strength", 0, nullptr);
-    d->sec_strength = vsapi->mapGetInt(in, "sec_strength", 0, nullptr);
-    d->pri_damping  = vsapi->mapGetInt(in, "pri_damping", 0, nullptr);
-    d->sec_damping  = vsapi->mapGetInt(in, "sec_damping", 0, nullptr);
+    const auto parameters[4] = { "pri_strength", "sec_strength", "pri_damping", "sec_damping" };
+    auto       elements[4]   = { d->pri_strength, d->sec_strength, d->pri_damping, d->sec_damping };
+    for (int parameter = 0; parameter < 4; parameter++) {
+        const int num_i = vsapi->mapNumElements(in, parameters[parameter]);
+        if (num_i == -1) {
+            vsapi->mapSetError(out, "vscdef: pri_strength, sec_strength, pri_damping, and sec_damping parameters are required");
+            vsapi->freeNode(d->clip);
+            return;
+        }
+        for (int i = 0; i < num_i; i++) {
+            if (i < VS_MAX_PLANES) {
+                int64_t value = vsapi->mapGetInt(in, parameters[parameter], i, nullptr);
+                for (int plane = i; plane < VS_MAX_PLANES; plane++)
+                    elements[parameter][plane] = value;
+            }
+            else {
+                vsapi->mapSetError(out, "vscdef: Too much elements in pri_strength, sec_strength, pri_damping, or sec_damping parameters");
+                vsapi->freeNode(d->clip);
+                return;
+            }
+        }
+    }
 
     const int num_i = vsapi->mapNumElements(in, "planes");
     if (num_i == -1) {
@@ -279,9 +299,9 @@ static void VS_CC cdef_create(const VSMap *in, VSMap *out, void *userData, VSCor
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin *plugin, const VSPLUGINAPI *vspapi) {
     vspapi->configPlugin("aka.cdef", "cdef", "Constrained Directional Enhancement Filter", VS_MAKE_VERSION(1, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
     vspapi->registerFunction("CDEF", "clip:vnode;"
-                                     "pri_strength:int;"
-                                     "sec_strength:int;"
-                                     "pri_damping:int;"
-                                     "sec_damping:int;"
+                                     "pri_strength:int[];"
+                                     "sec_strength:int[];"
+                                     "pri_damping:int[];"
+                                     "sec_damping:int[];"
                                      "planes:int[]:opt", "clip:vnode;", cdef_create, NULL, plugin);
 }
