@@ -11,6 +11,9 @@ if cc == 'clang-cl' or cc == 'intel-cl' or cc == 'intel-llvm-cl'
 else
   add_project_arguments('-ffinite-math-only', language : ['c', 'cpp'])
 endif
+if cc == 'clang'
+  add_project_link_arguments('-fuse-ld=lld', language: ['c', 'cpp'])
+endif
 
 sources = [
   'vscdefc/vscdef.cpp'
