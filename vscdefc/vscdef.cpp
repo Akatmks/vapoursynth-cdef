@@ -80,21 +80,21 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
         uint16_t * VS_RESTRICT       ori_dstp[VS_MAX_PLANES];
         std::ptrdiff_t               dst_stride[VS_MAX_PLANES];
 
-        auto __restrict ori_bufp           = new uint16_t[CDEF_INBUF_SIZE];
-        const int32_t   buf_stride         = CDEF_BSTRIDE;
-        int32_t         xdec[3];
-        int32_t         ydec[3];
-        uint8_t         dir[CDEF_NBLOCKS][CDEF_NBLOCKS];
-        int32_t         dirinit;
-        int32_t         var[CDEF_NBLOCKS][CDEF_NBLOCKS];
-        CdefList        dlist[MI_SIZE_64X64 * MI_SIZE_64X64];
-        int32_t         cdef_count;
-        const int32_t   pri_strength       = d->pri_strength;
-        const int32_t   sec_strength       = d->sec_strength;
-        const int32_t   pri_damping        = d->pri_damping;
-        const int32_t   sec_damping        = d->sec_damping;
-        const int32_t   coeff_shift        = fi->bitsPerSample - 8;
-        const uint8_t   subsampling_factor = 1;
+        auto * __restrict ori_bufp           = new uint16_t[CDEF_INBUF_SIZE];
+        const int32_t     buf_stride         = CDEF_BSTRIDE;
+        int32_t           xdec[3];
+        int32_t           ydec[3];
+        uint8_t           dir[CDEF_NBLOCKS][CDEF_NBLOCKS];
+        int32_t           dirinit;
+        int32_t           var[CDEF_NBLOCKS][CDEF_NBLOCKS];
+        CdefList          dlist[MI_SIZE_64X64 * MI_SIZE_64X64];
+        int32_t           cdef_count;
+        const int32_t     pri_strength       = d->pri_strength;
+        const int32_t     sec_strength       = d->sec_strength;
+        const int32_t     pri_damping        = d->pri_damping;
+        const int32_t     sec_damping        = d->sec_damping;
+        const int32_t     coeff_shift        = fi->bitsPerSample - 8;
+        const uint8_t     subsampling_factor = 1;
 
         for (int pli = 0; pli < fi->numPlanes; pli++) {
             ori_srcp[pli]   = reinterpret_cast<const uint16_t *>(vsapi->getReadPtr(clip, pli));
@@ -155,16 +155,16 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
                         fbbx[2] = MAX_SB_SIZE >> xdec[pli];
                         fbbx[3] = fbbx[2] + CDEF_HALO;
     
-                        auto VS_RESTRICT fb_srcp = ori_srcp[pli] + fbr * fbby[2] * src_stride[pli] + fbc * fbbx[2];
-                        auto VS_RESTRICT fb_dstp = ori_dstp[pli] + fbr * fbby[2] * dst_stride[pli] + fbc * fbbx[2];
-                        auto VS_RESTRICT fb_bufp = ori_bufp + CDEF_VBORDER * buf_stride + CDEF_HBORDER;
-                        auto VS_RESTRICT bufp    = fb_bufp + fbby[0] * buf_stride;
+                        auto * VS_RESTRICT fb_srcp = ori_srcp[pli] + fbr * fbby[2] * src_stride[pli] + fbc * fbbx[2];
+                        auto * VS_RESTRICT fb_dstp = ori_dstp[pli] + fbr * fbby[2] * dst_stride[pli] + fbc * fbbx[2];
+                        auto * VS_RESTRICT fb_bufp = ori_bufp + CDEF_VBORDER * buf_stride + CDEF_HBORDER;
+                        auto * VS_RESTRICT bufp    = fb_bufp + fbby[0] * buf_stride;
                         std::remove_cvref_t<decltype(fbby[0])> y;
                         for (y = fbby[0]; y < fbiy[0]; y++) {
                             std::fill(bufp + fbbx[0], bufp + fbbx[3], CDEF_VERY_LARGE);
                             bufp += buf_stride;
                         }
-                        auto VS_RESTRICT srcp    = fb_srcp + fbiy[0] * src_stride[pli];
+                        auto * VS_RESTRICT srcp    = fb_srcp + fbiy[0] * src_stride[pli];
                         for (; y < fbiy[3]; y++) {
                             std::fill(bufp + fbbx[0], bufp + fbix[0], CDEF_VERY_LARGE);
                             std::copy(srcp + fbix[0], srcp + fbix[3], bufp + fbix[0]);
@@ -198,10 +198,10 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
 
         for (int pli = 0; pli < fi->numPlanes; pli++) {
             if (!d->planes[pli]) {
-                const auto       pl_height = vsapi->getFrameHeight(clip, pli);
-                const auto       pl_width  = vsapi->getFrameWidth(clip, pli);
-                auto VS_RESTRICT srcp      = ori_srcp[pli];
-                auto VS_RESTRICT dstp      = ori_dstp[pli];
+                const auto         pl_height = vsapi->getFrameHeight(clip, pli);
+                const auto         pl_width  = vsapi->getFrameWidth(clip, pli);
+                auto * VS_RESTRICT srcp      = ori_srcp[pli];
+                auto * VS_RESTRICT dstp      = ori_dstp[pli];
                 for (std::remove_cvref_t<decltype(pl_height)> y = 0; y < pl_height; y++) {
                     std::copy_n(srcp, pl_width, dstp);
                     srcp += src_stride[pli];
