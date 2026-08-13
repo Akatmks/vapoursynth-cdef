@@ -244,8 +244,8 @@ static void VS_CC cdef_create(const VSMap *in, VSMap *out, void *userData, VSCor
         return;
     }
 
-    const auto parameters[4] = { "pri_strength", "sec_strength", "pri_damping", "sec_damping" };
-    auto       elements[4]   = { d->pri_strength, d->sec_strength, d->pri_damping, d->sec_damping };
+    const char *parameters[4] = { "pri_strength", "sec_strength", "pri_damping", "sec_damping" };
+    int64_t    *elements[4]   = { d->pri_strength, d->sec_strength, d->pri_damping, d->sec_damping };
     for (int parameter = 0; parameter < 4; parameter++) {
         const int num_i = vsapi->mapNumElements(in, parameters[parameter]);
         if (num_i == -1) {
