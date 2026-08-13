@@ -159,7 +159,7 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
                         auto VS_RESTRICT fb_dstp = ori_dstp[pli] + fbr * fbby[2] * dst_stride[pli] + fbc * fbbx[2];
                         auto VS_RESTRICT fb_bufp = ori_bufp + CDEF_VBORDER * buf_stride + CDEF_HBORDER;
                         auto VS_RESTRICT bufp    = fb_bufp + fbby[0] * buf_stride;
-                        decltype(fbby[0]) y;
+                        std::remove_cvref_t<decltype(fbby[0])> y;
                         for (y = fbby[0]; y < fbiy[0]; y++) {
                             std::fill(bufp + fbbx[0], bufp + fbbx[3], CDEF_VERY_LARGE);
                             bufp += buf_stride;
