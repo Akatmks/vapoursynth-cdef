@@ -238,8 +238,8 @@ static void VS_CC cdef_create(const VSMap *in, VSMap *out, void *userData, VSCor
         vsapi->freeNode(d->clip);
         return;
     }
-    if (vi->format.sampleType != stInteger || (vi->format.bitsPerSample != 12 && vi->format.bitsPerSample != 10)) {
-        vsapi->mapSetError(out, "vscdef: Only 12-bit and 10-bit integer format are supported");
+    if (vi->format.sampleType != stInteger || vi->format.bitsPerSample < 9) {
+        vsapi->mapSetError(out, "vscdef: Only integer format of 9-bit or higher are supported");
         vsapi->freeNode(d->clip);
         return;
     }
