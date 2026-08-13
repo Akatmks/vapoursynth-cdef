@@ -1,5 +1,10 @@
 name: build
-on: push
+on:
+  push:
+    tags-ignore:
+  release:
+    types:
+    - published
 
 jobs:
   build:
@@ -48,8 +53,33 @@ jobs:
     - run: PATH="/opt/homebrew/opt/llvm/bin:$PATH" CC=clang CXX=clang++ CFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" CXXFLAGS="-I/opt/homebrew/opt/llvm/include -march=skylake -mtune=skylake -Werror" LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -L/opt/homebrew/opt/llvm/lib $(realpath SVT-AV1/BuildAction/skylake/static/libSvtAv1Enc.a)" python -m build --no-isolation
       if: ${{ runner.os == 'macOS' && runner.arch == 'X64' }}
     - run: python -m wheel tags --remove --python-tag py3 --abi-tag none dist/*.whl
+      if: ${{ runner.os == 'Windows' && runner.arch == 'X64' }}
+    - run: python -m wheel tags --remove --python-tag py3 --abi-tag none --platform-tag manylinux_2_24_x86_64 dist/*.whl
+      if: ${{ runner.os == 'Linux' && runner.arch == 'X64' }}
+    - run: python -m wheel tags --remove --python-tag py3 --abi-tag none --platform-tag macosx_12_0_arm64 dist/*.whl
+      if: ${{ runner.os == 'macOS' && runner.arch == 'ARM64' }}
+    - run: python -m wheel tags --remove --python-tag py3 --abi-tag none --platform-tag macosx_12_0_x86_64 dist/*.whl
+      if: ${{ runner.os == 'macOS' && runner.arch == 'X64' }}
 
     - uses: actions/upload-artifact@v7
       with:
         name: '${{ runner.os }} ${{ runner.arch }}'
-        path: dist/*.whl
+        path: dist/*
+
+  release:
+    needs: [build]
+    if: ${{ github.event_name == 'release' }}
+    environment:
+      name: pypi
+      url: https://pypi.org/p/vapoursynth-cdef
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        path: dist
+        merge-multiple: true
+
+    - uses: pypa/gh-action-pypi-publish@release/v1
