@@ -23,7 +23,7 @@
 # SOFTWARE.
 # ---------------------------------------------------------------------
 
-from vstools import depth, DitherType
+from vstools import core, depth, DitherType
 
 def cdef(clip, pri_strength=[3, 1], sec_strength=[1, 0], pri_damping=4, sec_damping=4, **kwargs):
     assert clip.format.bits_per_sample >= 9
