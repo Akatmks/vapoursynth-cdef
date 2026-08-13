@@ -73,7 +73,7 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
             return nullptr;
         }
 
-        auto dst = vsapi->newVideoFrame(fi->format, width, height, clip, core);
+        auto dst = vsapi->newVideoFrame(fi, width, height, clip, core);
 
         const uint16_t * VS_RESTRICT ori_srcp[VS_MAX_PLANES];
         std::ptrdiff_t               src_stride[VS_MAX_PLANES];
@@ -110,10 +110,10 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
         // Width == X == Horizontal == Column
         const auto nvfb = (height + MAX_SB_SIZE - 1) >> MAX_SB_SIZE_LOG2;
         const auto nhfb = (width + MAX_SB_SIZE - 1) >> MAX_SB_SIZE_LOG2;
-        std::remove_cvref<decltype(nvfb)> fbiy[4]; // image_left (0) - halo, image_left (0), image_right, image_right + halo
-        std::remove_cvref<decltype(nhfb)> fbix[4]; // image_left (0) - halo, image_left (0), image_right, image_right + halo
-        std::remove_cvref<decltype(nvfb)> fbby[4]; // block_left (0) - halo, block_left (0), block_right, block_right + halo
-        std::remove_cvref<decltype(nhfb)> fbbx[4]; // block_left (0) - halo, block_left (0), block_right, block_right + halo
+        std::remove_cvref_t<decltype(nvfb)> fbiy[4]; // image_left (0) - halo, image_left (0), image_right, image_right + halo
+        std::remove_cvref_t<decltype(nhfb)> fbix[4]; // image_left (0) - halo, image_left (0), image_right, image_right + halo
+        std::remove_cvref_t<decltype(nvfb)> fbby[4]; // block_left (0) - halo, block_left (0), block_right, block_right + halo
+        std::remove_cvref_t<decltype(nhfb)> fbbx[4]; // block_left (0) - halo, block_left (0), block_right, block_right + halo
         for (int fbr = 0; fbr < nvfb; fbr++) {
             for (int fbc = 0; fbc < nhfb; fbc++) {
                 dirinit    = 0;
@@ -202,7 +202,7 @@ static const VSFrame * VS_CC cdef_get_frame(int n, int activationReason, void *i
                 const auto       pl_width  = vsapi->getFrameWidth(clip, pli);
                 auto VS_RESTRICT srcp      = ori_srcp[pli];
                 auto VS_RESTRICT dstp      = ori_dstp[pli];
-                for (std::remove_cvref<decltype(pl_height)> y = 0; y < pl_height; y++) {
+                for (std::remove_cvref_t<decltype(pl_height)> y = 0; y < pl_height; y++) {
                     std::copy_n(srcp, pl_width, dstp);
                     srcp += src_stride[pli];
                     dstp += dst_stride[pli];
