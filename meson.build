@@ -1,4 +1,4 @@
-project('vsletterbox', ['c', 'cpp'],
+project('vscdef', ['c', 'cpp'],
   version: '1.0.0',
   default_options: ['c_std=c99', 'cpp_std=c++23', 'buildtype=release', 'b_ndebug=if-release', 'b_lto=true']
 )
@@ -24,7 +24,7 @@ vapoursynth_include = run_command(
 )
 vapoursynth_include = include_directories(vapoursynth_include.stdout().strip())
 
-shared_library('vsletterbox', sources,
+shared_library('vscdef', sources,
   include_directories: [vapoursynth_include],
   install: true,
   install_dir: py.get_install_dir(pure: false, subdir: 'vapoursynth/plugins')
