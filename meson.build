@@ -2,14 +2,14 @@ project('vsletterbox', ['c', 'cpp'],
   version: '1.0.0',
   default_options: ['c_std=c99', 'cpp_std=c++23', 'buildtype=release', 'b_ndebug=if-release', 'b_lto=true']
 )
-cc = meson.get_compiler('cpp')
-if cc.get_id() == 'msvc' or cc.get_id() == 'gcc'
-  error('''vsletterbox only supports clang. It's the compiler that produces the fastest binary, and we've also utilised clang language extension to ensure faster speed''')
+cc = meson.get_compiler('cpp').get_id()
+if cc == 'msvc' or cc == 'gcc'
+  warning('''vscdef only supports clang. It's the compiler that produces the fastest binary''')
 endif
-if cc.get_id() == 'clang'
-  add_project_arguments('-ffinite-math-only', language : ['c', 'cpp'])
-elif cc.get_id() == 'clang-cl'
+if cc == 'clang-cl' or cc == 'intel-cl' or cc == 'intel-llvm-cl'
   add_project_arguments('/clang:-ffinite-math-only', language : ['c', 'cpp'])
+else
+  add_project_arguments('-ffinite-math-only', language : ['c', 'cpp'])
 endif
 
 sources = [
