@@ -19,10 +19,11 @@ However, the VapourSynth plugin requires 12-bit or 10-bit integer input, and req
 cdef(
     clip:         vs.VideoNode,
 
+    # All these parameters accept up to 3 integers for 3 planes
     pri_strength: int | Sequence[int] = [3, 1],
     sec_strength: int | Sequence[int] = [1, 0],
-    pri_damping:  int | Sequence[int] = 4,
-    sec_damping:  int | Sequence[int] = 4,
+    pri_damping:  int | Sequence[int] = 2,
+    sec_damping:  int | Sequence[int] = 2,
 
     planes:       PlanesT             = [0, 1, 2]
 )
