@@ -23,7 +23,8 @@ cdef(
     pri_strength: int | Sequence[int] = [3, 1],
     sec_strength: int | Sequence[int] = [1, 0],
     pri_damping:  int | Sequence[int] = 2,
-    sec_damping:  int | Sequence[int] = 2,
+    sec_damping:  int | Sequence[int] = 1,
+    # If the default is too strong, try disabling secondary filtering by setting `sec_strength` to `0` first.  
 
     planes:       PlanesT             = [0, 1, 2]
 )

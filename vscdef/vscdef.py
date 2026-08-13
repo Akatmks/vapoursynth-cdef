@@ -30,7 +30,7 @@ def cdef(
         pri_strength=[3, 1],
         sec_strength=[1, 0],
         pri_damping=2,
-        sec_damping=2,
+        sec_damping=1,
         **kwargs
     ):
     assert clip.format.bits_per_sample >= 9
