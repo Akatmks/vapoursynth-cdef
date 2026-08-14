@@ -51,7 +51,7 @@ dn = cdef(clip)
 mv = MVTools(clip, search_clip=Prefilter.DFTTEST)
 
 mv.analyze(tr=2, blksize=32, overlap=16, truemotion=MotionMode.COHERENCE, divide=2)
-mv.recalculate(thsad=10, blksize=8, overlap=4, dct=SADMode.ADAPTIVE_SATD_DCT, truemotion=MotionMode.COHERENCE)
+mv.recalculate(thsad=14, blksize=8, overlap=4, dct=SADMode.ADAPTIVE_SATD_DCT, truemotion=MotionMode.COHERENCE)
 
-dn = mv.degrain(dn, clip, tr=2, thsad=18)
+dn = mv.degrain(dn, clip, tr=2, thsad=24)
 ```
