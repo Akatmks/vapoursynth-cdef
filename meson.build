@@ -1,5 +1,5 @@
 project('vscdef', ['c', 'cpp'],
-  version: '1.0.0',
+  version: '1.0.0.post1',
   default_options: ['c_std=c99', 'cpp_std=c++23', 'buildtype=release', 'b_ndebug=if-release', 'b_lto=true']
 )
 cc = meson.get_compiler('cpp').get_id()
